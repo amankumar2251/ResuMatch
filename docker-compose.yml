@@ -1,0 +1,41 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_PASSWORD: example
+      POSTGRES_USER: app
+      POSTGRES_DB: resume_match
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+  redis:
+    image: redis:7
+    ports:
+      - '6379:6379'
+  ml_service:
+    build: ./ml-service
+    ports:
+      - '8001:8001'
+    environment:
+      - DATABASE_URL=postgres://app:example@postgres:5432/resume_match
+    depends_on: [postgres]
+  backend:
+    build: ./backend
+    ports:
+      - '8000:8000'
+    environment:
+      - ML_SERVICE_URL=http://ml_service:8001
+      - DATABASE_URL=postgres://app:example@postgres:5432/resume_match
+      - JWT_SECRET=supersecret
+    depends_on: [postgres, ml_service, redis]
+  frontend:
+    build: ./frontend
+    ports:
+      - '3000:3000'
+    environment:
+      - VITE_BACKEND_URL=http://localhost:8000
+
+volumes:
+  pgdata:
